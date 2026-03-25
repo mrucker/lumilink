@@ -25,30 +25,41 @@ export function AiRecommendations({ friend, theme, onSuggestionClick }: AiRecomm
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('http://localhost:3001/api/recommendations', {
+      const prompt = `You are a friendship coach. Given the following information about a relationship, suggest 3 specific, actionable ways to strengthen it.
+
+Friend: ${friend.name}
+Relationship Strength: ${friend.relationshipStrength}/100
+Category: ${friend.category}
+${friend.relationshipNature ? `Relationship Nature: ${friend.relationshipNature}` : ''}
+${completedTasks.length > 0 ? `Completed Tasks: ${completedTasks.join(', ')}` : ''}
+${pendingTasks.length > 0 ? `Pending Tasks: ${pendingTasks.join(', ')}` : ''}
+${(friend.bucketList || []).length > 0 ? `Bucket List: ${friend.bucketList!.map(b => b.title).join(', ')}` : ''}
+
+Respond with ONLY a JSON array of 3 objects, each with "suggestion" (a friendly description) and "taskTitle" (a short task name). No other text.`;
+
+      const res = await fetch('https://api.digital-trails.org/api/v1/lumilink', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
-          friendName: friend.name,
-          relationshipStrength: friend.relationshipStrength,
-          category: friend.category,
-          completedTasks,
-          pendingTasks,
-          relationshipNature: friend.relationshipNature || null,
-          bucketList: (friend.bucketList || []).map(b => b.title),
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1024,
+          messages: [
+            { role: 'user', content: prompt },
+          ],
         }),
       });
 
       if (!res.ok) throw new Error('Failed to fetch');
 
       const data = await res.json();
-      // Handle both old string[] format and new object[] format
-      const parsed = data.suggestions.map((s: string | Suggestion) =>
-        typeof s === 'string' ? { suggestion: s, taskTitle: s } : s
-      );
+      const raw = data.content[0].text;
+      const text = raw.replace(/```(?:json)?\s*/g, '').replace(/```\s*/g, '').trim();
+      const parsed: Suggestion[] = JSON.parse(text);
       setSuggestions(parsed);
     } catch {
-      setError('Could not load suggestions. Is the server running?');
+      setError('Could not load suggestions.');
     } finally {
       setLoading(false);
     }
