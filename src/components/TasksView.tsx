@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { CheckCircle2, Circle, Plus, User, Heart, Send, Inbox, Sparkles, X, Check, Bell, Camera, MapPin, Upload, Image, Users, Calendar, Search } from 'lucide-react';
 import { Friend, Memory } from '../App';
 
@@ -41,6 +41,11 @@ interface TasksViewProps {
   friends: Friend[];
   onAddMemory: (memory: Omit<Memory, 'id'>) => void;
   theme: 'city' | 'garden' | 'desert';
+  onToggleTask: (friendId: string, taskId: string) => void;
+  onToggleGroupTasks: (friendTaskPairs: { friendId: string; taskId: string }[], completed: boolean) => void;
+  onAddTaskToFriend: (friendId: string, task: { id: string; title: string; completed: boolean; groupId?: string; groupName?: string; date?: Date }) => void;
+  taskPrefill?: { title: string; friendId: string } | null;
+  onClearPrefill?: () => void;
 }
 
 interface TaskRequest {
@@ -66,7 +71,7 @@ interface GroupedTask {
   date?: Date;
 }
 
-export function TasksView({ friends, onAddMemory, theme }: TasksViewProps) {
+export function TasksView({ friends, onAddMemory, theme, onToggleTask, onToggleGroupTasks, onAddTaskToFriend, taskPrefill, onClearPrefill }: TasksViewProps) {
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
   const [currentTab, setCurrentTab] = useState<'tasks' | 'requests'>('tasks');
   const [showReflectionDialog, setShowReflectionDialog] = useState<{taskId: string, taskTitle: string, friendName: string, friendIds?: string[], isGroup?: boolean} | null>(null);
@@ -90,6 +95,16 @@ export function TasksView({ friends, onAddMemory, theme }: TasksViewProps) {
   const [showCameraCapture, setShowCameraCapture] = useState(false);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   
+  // Handle prefill from Lumilink Recommendations
+  useEffect(() => {
+    if (taskPrefill) {
+      setNewTaskTitle(taskPrefill.title);
+      setSelectedFriendsForTask(new Set([taskPrefill.friendId]));
+      setShowCreateTaskModal(true);
+      onClearPrefill?.();
+    }
+  }, [taskPrefill]);
+
   // Mock task requests - in real app this would come from backend
   const [taskRequests, setTaskRequests] = useState<TaskRequest[]>([
     {
@@ -212,48 +227,34 @@ export function TasksView({ friends, onAddMemory, theme }: TasksViewProps) {
 
   const handleCompleteTask = (taskTitle: string, friendName: string, taskId: string, isGroupTask?: boolean, groupedTask?: GroupedTask) => {
     if (isGroupTask && groupedTask) {
-      // For group tasks, complete all friends' tasks at once
       const allCompleted = groupedTask.friends.every(f => f.completed);
-      
+      const pairs = groupedTask.friends.map(ft => ({ friendId: ft.friend.id, taskId: ft.taskId }));
+
       if (!allCompleted) {
-        // Mark all as completed
-        groupedTask.friends.forEach(friendTask => {
-          const task = friendTask.friend.tasks.find(t => t.id === friendTask.taskId);
-          if (task) {
-            task.completed = true;
-          }
-        });
-        
-        // Show reflection dialog with all friend IDs
+        onToggleGroupTasks(pairs, true);
+
         const friendIds = groupedTask.friends.map(f => f.friend.id);
         const friendNames = groupedTask.friends.map(f => f.friend.name).join(', ');
-        setShowReflectionDialog({ 
-          taskId: taskId, 
-          taskTitle: taskTitle, 
+        setShowReflectionDialog({
+          taskId: taskId,
+          taskTitle: taskTitle,
           friendName: friendNames,
           friendIds: friendIds,
           isGroup: true
         });
       } else {
-        // Mark all as incomplete
-        groupedTask.friends.forEach(friendTask => {
-          const task = friendTask.friend.tasks.find(t => t.id === friendTask.taskId);
-          if (task) {
-            task.completed = false;
-          }
-        });
+        onToggleGroupTasks(pairs, false);
       }
     } else {
-      // Individual task
       const friend = friends.find(f => f.name === friendName);
       if (!friend) return;
-      
+
       const task = friend.tasks.find(t => t.id === taskId);
       if (task && !task.completed) {
-        task.completed = true;
+        onToggleTask(friend.id, taskId);
         setShowReflectionDialog({ taskId, taskTitle, friendName });
       } else if (task) {
-        task.completed = false;
+        onToggleTask(friend.id, taskId);
       }
     }
   };
@@ -266,28 +267,18 @@ export function TasksView({ friends, onAddMemory, theme }: TasksViewProps) {
   };
 
   const handleCancelReflection = () => {
-    // If user clicks X, uncheck the task(s) they just checked
     if (showReflectionDialog) {
       if (showReflectionDialog.isGroup && showReflectionDialog.friendIds) {
-        // Uncheck all friends in the group
-        showReflectionDialog.friendIds.forEach(friendId => {
+        const pairs = showReflectionDialog.friendIds.map(friendId => {
           const friend = friends.find(f => f.id === friendId);
-          if (friend) {
-            // Find the task and uncheck it
-            const task = friend.tasks.find(t => t.title === showReflectionDialog.taskTitle);
-            if (task) {
-              task.completed = false;
-            }
-          }
-        });
+          const task = friend?.tasks.find(t => t.title === showReflectionDialog.taskTitle);
+          return { friendId, taskId: task?.id || '' };
+        }).filter(p => p.taskId);
+        onToggleGroupTasks(pairs, false);
       } else {
-        // Uncheck single friend task
         const friend = friends.find(f => f.name === showReflectionDialog.friendName);
         if (friend) {
-          const task = friend.tasks.find(t => t.id === showReflectionDialog.taskId);
-          if (task) {
-            task.completed = false;
-          }
+          onToggleTask(friend.id, showReflectionDialog.taskId);
         }
       }
     }
@@ -363,20 +354,18 @@ export function TasksView({ friends, onAddMemory, theme }: TasksViewProps) {
     const request = taskRequests.find(r => r.id === requestId);
     if (!request) return;
 
-    // Find the friend who sent the request
     const friend = friends.find(f => f.name === request.fromUserName);
     if (friend) {
-      // Add the tasks to the friend's task list
       request.tasks.forEach(task => {
-        friend.tasks.push({
+        onAddTaskToFriend(friend.id, {
           id: task.id,
           title: task.title,
-          completed: false
+          completed: false,
+          date: task.date
         });
       });
     }
 
-    // Mark request as accepted
     setTaskRequests(requests =>
       requests.map(req =>
         req.id === requestId ? { ...req, status: 'accepted' as const } : req

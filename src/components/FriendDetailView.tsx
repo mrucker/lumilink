@@ -1,38 +1,39 @@
 import { useState } from 'react';
-import { ArrowLeft, CheckCircle2, Circle, Lightbulb, Camera, ListChecks, Activity, Compass } from 'lucide-react';
-import { Friend, Task } from '../App';
+import { ArrowLeft, CheckCircle2, Circle, Camera, ListChecks, Compass, Heart, Plus } from 'lucide-react';
+import { Friend, RelationshipNature, Task, BucketListItem } from '../App';
 import { Flower } from './Flower';
 import { DesertPlant } from './DesertPlant';
+import { AiRecommendations } from './AiRecommendations';
+import { RelationshipInfoTab } from './RelationshipInfoTab';
 
 interface FriendDetailViewProps {
   friend: Friend;
   onBack: () => void;
   theme?: 'garden' | 'desert';
+  onToggleTask: (friendId: string, taskId: string) => void;
+  onUpdateRelationshipNature: (friendId: string, nature: RelationshipNature) => void;
+  onToggleBucketItem: (friendId: string, itemId: string) => void;
+  onAddTaskToFriend: (friendId: string, task: Task) => void;
+  onCreateTaskFromRecommendation: (title: string, friendId: string) => void;
 }
 
-export function FriendDetailView({ friend, onBack, theme = 'garden' }: FriendDetailViewProps) {
-  const [tasks, setTasks] = useState<Task[]>(friend.tasks);
-  const [activeTab, setActiveTab] = useState<'tasks' | 'photos' | 'bucket' | 'activity'>('tasks');
+export function FriendDetailView({ friend, onBack, theme = 'garden', onToggleTask, onUpdateRelationshipNature, onToggleBucketItem, onAddTaskToFriend, onCreateTaskFromRecommendation }: FriendDetailViewProps) {
+  const [activeTab, setActiveTab] = useState<'tasks' | 'photos' | 'bucket' | 'about'>('tasks');
+  const tasks = friend.tasks;
+  const bucketList = friend.bucketList || [];
 
   const toggleTask = (taskId: string) => {
-    setTasks(tasks.map(task =>
-      task.id === taskId ? { ...task, completed: !task.completed } : task
-    ));
+    onToggleTask(friend.id, taskId);
   };
 
-  const recommendations = [
-    'Send a thoughtful message',
-    'Share a memory or inside joke',
-    'Plan a video call or meetup',
-    'Recommend a book, movie, or podcast',
-    'Celebrate their recent achievements',
-    'Ask about their current interests',
-  ];
+  const handleRecommendationClick = (suggestion: string) => {
+    onCreateTaskFromRecommendation(suggestion, friend.id);
+  };
 
   // Theme-specific colors
   const isDesert = theme === 'desert';
-  const headerGradient = isDesert 
-    ? 'from-[#DEB887] to-[#D2B48C]' 
+  const headerGradient = isDesert
+    ? 'from-[#DEB887] to-[#D2B48C]'
     : 'from-[#8B7355] to-[#6B5744]';
   const buttonBg = isDesert
     ? 'from-[#4A7C59] to-[#5A9B6F]'
@@ -51,7 +52,7 @@ export function FriendDetailView({ friend, onBack, theme = 'garden' }: FriendDet
           <span>{backText}</span>
         </button>
         <h1 className="text-2xl text-[#F5F1E8]">{friend.name}</h1>
-        
+
         {/* Plant/Flower and progress bar container */}
         <div className="mt-3 flex items-center gap-3">
           {/* Small plant/flower display */}
@@ -71,7 +72,7 @@ export function FriendDetailView({ friend, onBack, theme = 'garden' }: FriendDet
               />
             )}
           </div>
-          
+
           {/* Progress bar */}
           <div className="flex-1 flex items-center gap-3">
             <div className={`flex-1 h-3 ${isDesert ? 'bg-[#C9AE8F]' : 'bg-[#5A4735]'} rounded-full overflow-hidden shadow-inner`}>
@@ -88,22 +89,22 @@ export function FriendDetailView({ friend, onBack, theme = 'garden' }: FriendDet
             </span>
           </div>
         </div>
-        
+
         {/* Relationship status indicator */}
         <div className="mt-2 text-xs text-[#F5F1E8]/80">
           {isDesert ? (
             <>
-              {friend.relationshipStrength >= 80 && '🌺 Thriving relationship'}
-              {friend.relationshipStrength >= 60 && friend.relationshipStrength < 80 && '🌴 Needs attention to stay strong'}
-              {friend.relationshipStrength >= 40 && friend.relationshipStrength < 60 && '🌵 Growing but needs care'}
-              {friend.relationshipStrength < 40 && '🌱 Continue growing relationship'}
+              {friend.relationshipStrength >= 80 && 'Thriving relationship'}
+              {friend.relationshipStrength >= 60 && friend.relationshipStrength < 80 && 'Needs attention to stay strong'}
+              {friend.relationshipStrength >= 40 && friend.relationshipStrength < 60 && 'Growing but needs care'}
+              {friend.relationshipStrength < 40 && 'Continue growing relationship'}
             </>
           ) : (
             <>
-              {friend.relationshipStrength >= 80 && '🌸 Thriving relationship'}
-              {friend.relationshipStrength >= 60 && friend.relationshipStrength < 80 && '🥀 Needs attention to stay strong'}
-              {friend.relationshipStrength >= 40 && friend.relationshipStrength < 60 && '🌱 Growing but needs care'}
-              {friend.relationshipStrength < 40 && '🌿 Continue growing relationship'}
+              {friend.relationshipStrength >= 80 && 'Thriving relationship'}
+              {friend.relationshipStrength >= 60 && friend.relationshipStrength < 80 && 'Needs attention to stay strong'}
+              {friend.relationshipStrength >= 40 && friend.relationshipStrength < 60 && 'Growing but needs care'}
+              {friend.relationshipStrength < 40 && 'Continue growing relationship'}
             </>
           )}
         </div>
@@ -123,7 +124,7 @@ export function FriendDetailView({ friend, onBack, theme = 'garden' }: FriendDet
             <ListChecks className="w-5 h-5" />
             <span className="text-sm font-medium">Tasks</span>
           </button>
-          
+
           <button
             onClick={() => setActiveTab('photos')}
             className={`flex-1 flex items-center justify-center gap-1.5 py-3 rounded-xl transition-all ${
@@ -135,7 +136,7 @@ export function FriendDetailView({ friend, onBack, theme = 'garden' }: FriendDet
             <Camera className="w-5 h-5" />
             <span className="text-sm font-medium">Photos</span>
           </button>
-          
+
           <button
             onClick={() => setActiveTab('bucket')}
             className={`flex-1 flex items-center justify-center gap-1.5 py-3 rounded-xl transition-all ${
@@ -148,18 +149,18 @@ export function FriendDetailView({ friend, onBack, theme = 'garden' }: FriendDet
             <span className="text-sm font-medium">Bucket List</span>
           </button>
         </div>
-        
-        {/* Activity Report Button - Full Width Below */}
+
+        {/* About Button - Full Width Below */}
         <button
-          onClick={() => setActiveTab('activity')}
+          onClick={() => setActiveTab('about')}
           className={`w-full flex items-center justify-center gap-1.5 py-3 rounded-xl transition-all mt-2 ${
-            activeTab === 'activity'
+            activeTab === 'about'
               ? `bg-gradient-to-br ${buttonBg} text-white shadow-lg`
               : 'bg-white text-[#5D4E37] border-2 border-[#D4C5B0]'
           }`}
         >
-          <Activity className="w-5 h-5" />
-          <span className="text-sm font-medium">Activity Report</span>
+          <Heart className="w-5 h-5" />
+          <span className="text-sm font-medium">About</span>
         </button>
       </div>
 
@@ -193,7 +194,7 @@ export function FriendDetailView({ friend, onBack, theme = 'garden' }: FriendDet
                   </div>
                 ))}
               </div>
-              
+
               {tasks.length === 0 && (
                 <p className="text-[#7C6F5B] text-center py-4">
                   No tasks yet. Add some to strengthen your friendship!
@@ -201,27 +202,8 @@ export function FriendDetailView({ friend, onBack, theme = 'garden' }: FriendDet
               )}
             </div>
 
-            {/* Recommendations Section */}
-            <div className="bg-white rounded-2xl p-5 shadow-lg border-2 border-[#D4C5B0]">
-              <div className="flex items-center justify-center gap-2 mb-4">
-                <Lightbulb className="w-5 h-5 text-[#F59E0B]" />
-                <h2 className="text-xl text-[#5D4E37]">Recommendations</h2>
-              </div>
-              <div className="space-y-2">
-                {recommendations.slice(0, 4).map((rec, index) => (
-                  <div
-                    key={index}
-                    className="flex items-start gap-3 p-3 rounded-xl bg-[#F5F1E8]"
-                  >
-                    <div
-                      className="w-2 h-2 rounded-full mt-2 flex-shrink-0"
-                      style={{ backgroundColor: friend.color }}
-                    />
-                    <span className="text-[#5D4E37] flex-1">{rec}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+            {/* Lumilink Recommendations */}
+            <AiRecommendations friend={friend} theme={isDesert ? 'desert' : 'garden'} onSuggestionClick={handleRecommendationClick} />
 
             {/* Stats */}
             <div className="grid grid-cols-2 gap-4">
@@ -260,33 +242,48 @@ export function FriendDetailView({ friend, onBack, theme = 'garden' }: FriendDet
         {/* Bucket List Section */}
         {activeTab === 'bucket' && (
           <div className="bg-white rounded-2xl p-5 shadow-lg border-2 border-[#D4C5B0]">
-            <h2 className="text-xl text-[#5D4E37] mb-4 text-center">Bucket List</h2>
-            <div className="text-center py-8">
-              <Compass className="w-16 h-16 text-[#A0937D] mx-auto mb-4" />
-              <p className="text-[#7C6F5B] mb-4">
-                No bucket list items yet. Start dreaming up adventures!
-              </p>
-              <button className="bg-gradient-to-br from-[#6B8E4E] to-[#5A7B3E] text-white px-6 py-3 rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-105 active:scale-95">
-                Add Activity
-              </button>
-            </div>
+            <h2 className="text-xl text-[#5D4E37] mb-4">Bucket List</h2>
+            {bucketList.length > 0 ? (
+              <div className="space-y-3">
+                {bucketList.map((item: BucketListItem) => (
+                  <div
+                    key={item.id}
+                    onClick={() => onToggleBucketItem(friend.id, item.id)}
+                    className="flex items-center gap-3 p-3 rounded-xl bg-[#F5F1E8] hover:bg-[#EDE7DB] transition-colors cursor-pointer"
+                  >
+                    {item.completed ? (
+                      <CheckCircle2 className="w-6 h-6 text-[#6B8E4E] flex-shrink-0" />
+                    ) : (
+                      <Circle className="w-6 h-6 text-[#A0937D] flex-shrink-0" />
+                    )}
+                    <span className={`flex-1 ${item.completed ? 'text-[#7C6F5B] line-through' : 'text-[#5D4E37]'}`}>
+                      {item.title}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <Compass className="w-16 h-16 text-[#A0937D] mx-auto mb-4" />
+                <p className="text-[#7C6F5B] mb-4">
+                  No bucket list items yet. Start dreaming up adventures!
+                </p>
+              </div>
+            )}
+            <button className={`mt-4 w-full flex items-center justify-center gap-2 bg-gradient-to-br ${buttonBg} text-white py-3 rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-105 active:scale-95`}>
+              <Plus className="w-4 h-4" />
+              Add to Bucket List
+            </button>
           </div>
         )}
 
-        {/* Activity Report Section */}
-        {activeTab === 'activity' && (
-          <div className="bg-white rounded-2xl p-5 shadow-lg border-2 border-[#D4C5B0]">
-            <h2 className="text-xl text-[#5D4E37] mb-4 text-center">Activity Report</h2>
-            <div className="text-center py-8">
-              <Activity className="w-16 h-16 text-[#A0937D] mx-auto mb-4" />
-              <p className="text-[#7C6F5B] mb-4">
-                Track and report shared activities to keep your friendship thriving!
-              </p>
-              <button className="bg-gradient-to-br from-[#6B8E4E] to-[#5A7B3E] text-white px-6 py-3 rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-105 active:scale-95">
-                Report Activity
-              </button>
-            </div>
-          </div>
+        {/* About / Relationship Info Section */}
+        {activeTab === 'about' && (
+          <RelationshipInfoTab
+            friend={friend}
+            theme={isDesert ? 'desert' : 'garden'}
+            onUpdateRelationshipNature={onUpdateRelationshipNature}
+          />
         )}
       </div>
     </div>
