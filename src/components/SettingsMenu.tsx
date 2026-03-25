@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Menu, Building2, Flower2, Waves, X } from 'lucide-react';
+import { Pencil, Building2, Flower2, Waves, X } from 'lucide-react';
 
 interface SettingsMenuProps {
   theme: 'city' | 'garden' | 'desert';
@@ -11,16 +11,16 @@ export function SettingsMenu({ theme, onThemeChange }: SettingsMenuProps) {
 
   return (
     <>
-      {/* Menu Button */}
+      {/* Theme Toggle Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="absolute top-10 right-4 z-50 bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-lg text-gray-700 hover:bg-white transition-all hover:scale-105 active:scale-95"
-        aria-label="Settings menu"
+        className="absolute top-10 right-4 z-50 bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-lg drop-shadow-md text-gray-700 hover:bg-white transition-all hover:scale-105 active:scale-95"
+        aria-label="Change theme"
       >
-        {isOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+        {isOpen ? <X className="w-5 h-5" /> : <Pencil className="w-5 h-5" />}
       </button>
 
-      {/* Menu Dropdown */}
+      {/* Theme Menu Dropdown */}
       {isOpen && (
         <>
           {/* Backdrop */}
@@ -32,7 +32,7 @@ export function SettingsMenu({ theme, onThemeChange }: SettingsMenuProps) {
           {/* Menu Content */}
           <div className="absolute top-20 right-4 z-50 bg-white rounded-2xl shadow-2xl overflow-hidden border border-gray-200 min-w-[200px]">
             {/* Theme Options */}
-            <div className="p-3 border-b border-gray-100">
+            <div className="p-3">
               <p className="text-xs font-medium text-gray-500 mb-2 px-2">Theme</p>
               <div className="space-y-1">
                 <button
@@ -78,28 +78,6 @@ export function SettingsMenu({ theme, onThemeChange }: SettingsMenuProps) {
                   <span className="text-sm font-medium">Beach Oasis</span>
                 </button>
               </div>
-            </div>
-
-            {/* Additional Menu Options */}
-            <div className="p-2">
-              <button
-                onClick={() => setIsOpen(false)}
-                className="w-full text-left px-3 py-2.5 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-all"
-              >
-                Settings
-              </button>
-              <button
-                onClick={() => setIsOpen(false)}
-                className="w-full text-left px-3 py-2.5 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-all"
-              >
-                About
-              </button>
-              <button
-                onClick={() => setIsOpen(false)}
-                className="w-full text-left px-3 py-2.5 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-all"
-              >
-                Help & Support
-              </button>
             </div>
           </div>
         </>

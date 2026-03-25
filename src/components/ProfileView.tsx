@@ -436,12 +436,12 @@ export default function ProfileView({
     <div className="flex-1 bg-[#F5F1E8] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
       {/* Header - Matches Tasks page banner */}
       <div 
-        className="px-6 pt-16 pb-8"
+        className="px-6 pt-10 pb-6"
         style={{
           background: theme === 'city' 
-            ? 'linear-gradient(to bottom right, #1B3A5F, #2D5F8D)'
+            ? 'linear-gradient(to bottom right, #1f2937, #111827)'
             : theme === 'desert'
-            ? 'linear-gradient(to bottom right, #D2691E, #CD853F)'
+            ? 'linear-gradient(to bottom right, #DEB887, #D2B48C)'
             : 'linear-gradient(to bottom right, #6B8E4E, #5A7B3E)'
         }}
       >
