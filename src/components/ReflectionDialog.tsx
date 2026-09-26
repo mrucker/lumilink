@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, Upload, Camera, Check } from 'lucide-react';
 import { Memory } from '../App';
+import { askLlm } from '../api/llm';
 
 interface ReflectionDialogProps {
   taskId: string;
@@ -71,20 +72,7 @@ Generate exactly 1 short, warm, open-ended reflection question that helps the us
 
 Respond with ONLY the question, nothing else.`;
 
-      const res = await fetch('https://api.digital-trails.org/api/v1/lumilink', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 150,
-          messages: [{ role: 'user', content: prompt }],
-        }),
-      });
-
-      if (!res.ok) throw new Error('Failed to fetch');
-
-      const data = await res.json();
-      const question = data.content[0].text.trim();
+      const question = (await askLlm(prompt)).trim();
       setReflectionQuestion(question);
       setUsedQuestions(prev => new Set([...prev, question]));
     } catch {
