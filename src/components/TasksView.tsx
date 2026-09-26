@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { CheckCircle2, Circle, Plus, User, UserPlus, Heart, Send, Inbox, Sparkles, X, Check, Bell, Camera, MapPin, Upload, Image, Users, Calendar, Search } from 'lucide-react';
 import { Friend, Memory } from '../App';
 import { CreateTaskModal } from './CreateTaskModal';
+import { askLlm } from '../api/llm';
 
 // Helper functions for date formatting
 const formatDate = (date: Date): string => {
@@ -430,20 +431,7 @@ Generate exactly 1 short, warm, open-ended reflection question that helps the us
 
 Respond with ONLY the question, nothing else.`;
 
-      const res = await fetch('https://api.digital-trails.org/api/v1/lumilink', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 150,
-          messages: [{ role: 'user', content: prompt }],
-        }),
-      });
-
-      if (!res.ok) throw new Error('Failed to fetch');
-
-      const data = await res.json();
-      const question = data.content[0].text.trim();
+      const question = (await askLlm(prompt)).trim();
       setReflectionQuestion(question);
       setUsedQuestions(prev => new Set([...prev, question]));
     } catch {

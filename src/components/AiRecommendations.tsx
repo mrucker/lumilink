@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { RefreshCw, ArrowRight, Users } from 'lucide-react';
 import { Friend } from '../App';
+import { askLlm, extractJsonArray } from '../api/llm';
 
 interface AiRecommendationsProps {
   friend: Friend;
@@ -15,6 +16,31 @@ interface Suggestion {
   isGroup?: boolean;
   groupFriendIds?: string[];
   groupFriendNames?: string[];
+}
+
+const isStringArray = (v: unknown): v is string[] =>
+  Array.isArray(v) && v.every(x => typeof x === 'string');
+
+// Validates one item from the model's reply. Items missing the text fields are dropped rather
+// than rendered. A group suggestion keeps only friend IDs that actually exist, and falls back to
+// an individual suggestion if fewer than two remain.
+function toSuggestion(item: unknown, knownIds: Set<string>): Suggestion | null {
+  if (typeof item !== 'object' || item === null) return null;
+  const { suggestion, taskTitle, isGroup, groupFriendIds, groupFriendNames } = item as Record<string, unknown>;
+  if (typeof suggestion !== 'string' || typeof taskTitle !== 'string') return null;
+
+  const ids = isGroup === true && isStringArray(groupFriendIds)
+    ? groupFriendIds.filter(id => knownIds.has(id))
+    : [];
+  if (ids.length < 2) return { suggestion, taskTitle, isGroup: false };
+
+  return {
+    suggestion,
+    taskTitle,
+    isGroup: true,
+    groupFriendIds: ids,
+    groupFriendNames: isStringArray(groupFriendNames) ? groupFriendNames : undefined,
+  };
 }
 
 export function AiRecommendations({ friend, allFriends, theme, onSuggestionClick }: AiRecommendationsProps) {
@@ -62,26 +88,12 @@ For individual (non-group) suggestions, set "isGroup": false and omit groupFrien
 
 Respond with ONLY a JSON array of 3 objects, each with: "suggestion" (a friendly description), "taskTitle" (a short task name), "isGroup" (boolean), and optionally "groupFriendIds" (string array) and "groupFriendNames" (string array). No other text.`;
 
-      const res = await fetch('https://api.digital-trails.org/api/v1/lumilink', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 1024,
-          messages: [
-            { role: 'user', content: prompt },
-          ],
-        }),
-      });
-
-      if (!res.ok) throw new Error('Failed to fetch');
-
-      const data = await res.json();
-      const raw = data.content[0].text;
-      const text = raw.replace(/```(?:json)?\s*/g, '').replace(/```\s*/g, '').trim();
-      const parsed: Suggestion[] = JSON.parse(text);
+      const raw = await askLlm(prompt);
+      const knownIds = new Set(allFriends.map(f => f.id));
+      const parsed = extractJsonArray(raw)
+        .map(item => toSuggestion(item, knownIds))
+        .filter((s): s is Suggestion => s !== null);
+      if (parsed.length === 0) throw new Error('No usable suggestions');
       setSuggestions(parsed);
     } catch {
       setError('Could not load suggestions.');
